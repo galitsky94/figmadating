@@ -3,6 +3,9 @@ import Cursor from './Cursor';
 import { generateUsers } from '../utils/userGenerator';
 import ChatBar from './ChatBar';
 
+// Define our own Timeout type to avoid NodeJS namespace dependency
+type Timeout = ReturnType<typeof setTimeout>;
+
 interface User {
   id: number;
   name: string;
@@ -48,6 +51,51 @@ const getDistance = (x1: number, y1: number, x2: number, y2: number): number => 
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 };
 
+// Function to determine maximum interaction distance based on premium status
+const getInteractionDistance = (user1: User, user2: User): number => {
+  // Base interaction distance
+  const baseDistance = 80;
+
+  // Premium users get more interaction distance
+  const premiumBonus = 50;
+
+  // If either user is premium, apply the premium bonus
+  if (user1.isPremium || user2.isPremium) {
+    return baseDistance + premiumBonus;
+  }
+
+  // Standard distance for regular users
+  return baseDistance;
+};
+
+// Function to determine chat activation time based on premium status
+const getActivationTime = (user1: User, user2: User): number => {
+  // Base time for regular users
+  const baseTime = 3000; // 3 seconds
+
+  // Premium users get faster activation time
+  const premiumTime = 1500; // 1.5 seconds
+
+  // If either user is premium, use the premium activation time
+  if (user1.isPremium || user2.isPremium) {
+    return premiumTime;
+  }
+
+  // Standard time for regular users
+  return baseTime;
+};
+
+// Function to determine interaction line length based on premium status
+const getInteractionLineLength = (user1: User, user2: User): number => {
+  // Base line length
+  const baseLength = 80;
+  const premiumBonus = 50;
+  if (user1.isPremium || user2.isPremium) {
+    return baseLength + premiumBonus;
+  }
+  return baseLength;
+};
+
 // Add a ChatStatus type
 type ChatStatus = 'none' | 'started' | 'active';
 
@@ -60,7 +108,6 @@ const Canvas = () => {
   const mousePositionRef = useRef({ x: 0, y: 0 });
   const initialized = useRef(false);
   const [isInChatMode, setIsInChatMode] = useState(false);
-  // Add chatStatus to track chat state more precisely
   const [chatStatus, setChatStatus] = useState<ChatStatus>('none');
   const [activeChat, setActiveChat] = useState<{
     userId: number;
@@ -71,7 +118,7 @@ const Canvas = () => {
     isPartnerPremium: boolean;
   } | undefined>(undefined);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const chatResponseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chatResponseTimeoutRef = useRef<Timeout | null>(null);
 
   // Function to close the chat window
   const handleCloseChat = () => {
@@ -200,7 +247,6 @@ const Canvas = () => {
 
         // Check for interactions
         const newInteractions: Record<number, number> = {};
-        const interactionDistance = 80; // Distance for interaction
         const now = Date.now();
 
         // Check each pair of users for possible interactions
@@ -225,6 +271,8 @@ const Canvas = () => {
               }
             }
 
+            // Use premium-aware interaction distance
+            const interactionDistance = getInteractionDistance(updatedUsers[i], updatedUsers[j]);
             const distance = getDistance(
               updatedUsers[i].x,
               updatedUsers[i].y,
@@ -264,11 +312,13 @@ const Canvas = () => {
                   interactionStartTimeRef.current[interactionKey] = now;
                 }
 
-                // Check if this interaction has lasted for 3+ seconds and involves the real user
+                // Use premium-aware activation time
+                const activationTime = getActivationTime(updatedUsers[i], updatedUsers[j]);
+                // Check if this interaction has lasted for activationTime+ and involves the real user
                 const interactionDuration = now - interactionStartTimeRef.current[interactionKey];
                 const isUserInvolved = updatedUsers[i].isRealUser || updatedUsers[j].isRealUser;
 
-                if (interactionDuration > 3000 && isUserInvolved) {
+                if (interactionDuration > activationTime && isUserInvolved) {
                   // Determine which user is the real user
                   const realUser = updatedUsers[i].isRealUser ? updatedUsers[i] : updatedUsers[j];
                   const partner = updatedUsers[i].isRealUser ? updatedUsers[j] : updatedUsers[i];
@@ -413,24 +463,40 @@ const Canvas = () => {
       >
         {/* Render interaction lines */}
         <svg className="absolute h-full w-full pointer-events-none">
+          {/* Premium glow filter definition */}
+          <defs>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
           {Object.entries(interactions).map(([userId1, userId2]) => {
-            const user1 = users.find(u => u.id === parseInt(userId1));
-            const user2 = users.find(u => u.id === parseInt(userId2));
+            const userId1Num = parseInt(userId1);
+            const userId2Num = typeof userId2 === "number" ? userId2 : parseInt(userId2 as string);
+            const user1 = users.find(u => u.id === userId1Num);
+            const user2 = users.find(u => u.id === userId2Num);
 
-            if (!user1 || !user2 || parseInt(userId1) > userId2) return null;
+            if (!user1 || !user2 || userId1Num > userId2Num) return null;
 
             const isPremiumInteraction = user1.isPremium || user2.isPremium;
             const isUserInteraction = user1.isRealUser || user2.isRealUser;
 
             // Calculate interaction duration
-            const interactionKey = [parseInt(userId1), parseInt(userId2)].sort().join('-');
+            const interactionKey = [userId1Num, userId2Num].sort().join('-');
             const interactionStart = interactionStartTimeRef.current[interactionKey] || Date.now();
             const interactionDuration = Date.now() - interactionStart;
 
             // Line properties based on interaction duration
-            let strokeWidth = isPremiumInteraction ? 2 : 1;
+            let strokeWidth = isPremiumInteraction ? 2.5 : 1;
             let opacity = 0.7;
-            let strokeDash = "4";
+            let strokeDash = isPremiumInteraction ? "3" : "4";
+
+            // Premium interactions get a nice glow effect and different color
+            let strokeColor = isPremiumInteraction ? "#9333ea" : "#ec4899";
+            let filter = isPremiumInteraction ? "url(#glow)" : "";
 
             // Make user interactions more prominent
             if (isUserInteraction) {
@@ -438,37 +504,58 @@ const Canvas = () => {
               opacity = 0.8;
             }
 
-            // Enhance line as interaction continues (without using explicit timer)
+            // Enhance line as interaction continues
             if (interactionDuration > 1000) {
               strokeWidth += 0.5;
               opacity = 0.8;
-              strokeDash = "3,2";
+              strokeDash = isPremiumInteraction ? "2" : "3,2";
             }
 
             if (interactionDuration > 2000) {
               strokeWidth += 0.5;
               opacity = 0.9;
-              strokeDash = "2,1";
+              strokeDash = isPremiumInteraction ? "1" : "2,1";
             }
 
             // At 3+ seconds, the line is most prominent
-            if (interactionDuration > 3000) {
+            // For premium, use longer line
+            let lineLength = getInteractionLineLength(user1, user2);
+            if (interactionDuration > getActivationTime(user1, user2)) {
               strokeWidth += 1;
               opacity = 1;
               strokeDash = isPremiumInteraction ? "0" : "1";
             }
 
+            // Calculate direction for line shortening/lengthening
+            const dx = user2.x - user1.x;
+            const dy = user2.y - user1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            let x1 = user1.x + 10;
+            let y1 = user1.y + 10;
+            let x2 = user2.x + 10;
+            let y2 = user2.y + 10;
+
+            // If premium, allow longer lines (draw full line if within premium distance)
+            // Otherwise, clamp to base distance
+            if (dist > lineLength) {
+              // Shorten the line to the allowed length
+              const ratio = lineLength / dist;
+              x2 = x1 + (dx * ratio);
+              y2 = y1 + (dy * ratio);
+            }
+
             return (
               <line
                 key={`${userId1}-${userId2}`}
-                x1={user1.x + 10}
-                y1={user1.y + 10}
-                x2={user2.x + 10}
-                y2={user2.y + 10}
-                stroke={isPremiumInteraction ? "#9333ea" : "#ec4899"}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 strokeDasharray={strokeDash}
                 opacity={opacity}
+                filter={filter}
               />
             );
           })}
