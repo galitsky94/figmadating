@@ -483,8 +483,8 @@ const Canvas = () => {
           />
         ))}
 
-        {/* Render real user cursor separately */}
-        {users.find(user => user.isRealUser) && (
+        {/* Render real user cursor separately (only if chat is not active) */}
+        {!activeChat && users.find(user => user.isRealUser) && (
           <div
             className="absolute pointer-events-none z-50"
             style={{
