@@ -32,6 +32,22 @@ const ChatBar: React.FC<ChatBarProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Hide cursor globally when chat is active
+  useEffect(() => {
+    if (activeChat) {
+      // Add a no-cursor class to the body element
+      document.body.classList.add('no-cursor');
+    } else {
+      // Remove the no-cursor class when chat is closed
+      document.body.classList.remove('no-cursor');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('no-cursor');
+    };
+  }, [activeChat]);
+
   // Auto-focus input when chat opens
   useEffect(() => {
     if (activeChat && inputRef.current) {
@@ -138,11 +154,11 @@ const ChatBar: React.FC<ChatBarProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30 pointer-events-none cursor-none"
+      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30 pointer-events-none"
     >
       {/* Chat window - limited to 50% width */}
       <div
-        className="w-full max-w-xl h-[480px] bg-gray-900/90 border border-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-auto cursor-default"
+        className="w-full max-w-xl h-[480px] bg-gray-900/90 border border-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-auto"
       >
         {/* Chat header */}
         <div className="flex items-center justify-between px-4 py-3 bg-gray-800/70 border-b border-gray-700 shrink-0">

@@ -73,6 +73,18 @@ const Canvas = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const chatResponseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Function to close the chat window
+  const handleCloseChat = () => {
+    setActiveChat(undefined);
+    setChatStatus('none');
+    setChatMessages([]);
+    // Clear any active AI response timeout
+    if (chatResponseTimeoutRef.current) {
+      clearTimeout(chatResponseTimeoutRef.current);
+      chatResponseTimeoutRef.current = null;
+    }
+  };
+
   // Initialize all cursors at once
   useEffect(() => {
     if (initialized.current) return;
@@ -165,13 +177,6 @@ const Canvas = () => {
       // Add the AI response to the chat
       setChatMessages(prev => [...prev, aiResponse]);
     }, responseDelay);
-  };
-
-  // Function to handle closing the chat
-  const handleCloseChat = () => {
-    setActiveChat(undefined);
-    setChatStatus('none');
-    setChatMessages([]);
   };
 
   // Animation loop
@@ -528,7 +533,7 @@ const Canvas = () => {
         activeChat={activeChat}
         messages={chatMessages}
         onSendMessage={handleSendMessage}
-        onCloseChat={handleCloseChat} // Add the close function
+        onCloseChat={handleCloseChat}
       />
     </>
   );
