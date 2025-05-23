@@ -72,6 +72,12 @@ const ChatBar: React.FC<ChatBarProps> = ({
       e.preventDefault();
       handleSendMessage();
     }
+
+    // Also close the chat on Escape key
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onCloseChat();
+    }
   };
 
   // Auto-scroll to the latest message
@@ -153,10 +159,19 @@ const ChatBar: React.FC<ChatBarProps> = ({
   const partnerColor = isPartnerPremium ? '#7e22ce' : (partnerName.startsWith('You') ? '#93c5fd' : '#ec4899');
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30 pointer-events-none"
-    >
-      {/* Chat window - limited to 50% width */}
+    <>
+      {/* Full screen cursor blocker */}
+      <div
+        className="fixed inset-0 z-40"
+        style={{ cursor: 'none' }}
+      />
+
+      {/* Chat overlay */}
+      <div
+        className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30 pointer-events-none hide-cursor"
+        style={{ cursor: 'none' }}
+      >
+        {/* Chat window - limited to 50% width */}
       <div
         className="w-full max-w-xl h-[480px] bg-gray-900/90 border border-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-auto"
       >
@@ -261,6 +276,7 @@ const ChatBar: React.FC<ChatBarProps> = ({
         </div>
       </div>
     </div>
+    </>
   );
 };
 

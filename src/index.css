@@ -2,26 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hide cursor completely for the whole document when chat is active */
-body.no-cursor * {
+.hide-cursor {
   cursor: none !important;
-}
-
-/* Except for interactive elements in the chat that still need appropriate cursors */
-body.no-cursor input {
-  cursor: text !important;
-}
-
-body.no-cursor button {
-  cursor: pointer !important;
-}
-
-body.no-cursor a {
-  cursor: pointer !important;
-}
-
-body.no-cursor .cursor-visible {
-  cursor: default !important;
 }
 
 body {
