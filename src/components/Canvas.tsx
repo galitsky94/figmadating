@@ -14,6 +14,7 @@ interface User {
   speedY: number;
   isInteracting?: boolean;
   interactingWith?: number;
+  isRealUser?: boolean;
 }
 
 // Calculate distance between two points
@@ -24,16 +25,76 @@ const getDistance = (x1: number, y1: number, x2: number, y2: number): number => 
 const Canvas = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [interactions, setInteractions] = useState<Record<number, number>>({});
+  const [userCursor, setUserCursor] = useState<User | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const interactionStartTimeRef = useRef<Record<string, number>>({});
+
+  // Initialize user cursor
+  useEffect(() => {
+    const realUserCursor: User = {
+      id: 999, // Special ID for real user
+      name: 'You',
+      username: 'user',
+      gender: 'male', // Default, but doesn't matter functionally
+      isPremium: true, // Make the user premium
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      speedX: 0,
+      speedY: 0,
+      isRealUser: true
+    };
+
+    setUserCursor(realUserCursor);
+
+    // Add the user cursor to the users array
+    setUsers(prevUsers => [...prevUsers, realUserCursor]);
+  }, []);
+
+  // Track mouse movement
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!userCursor) return;
+
+      const x = e.clientX;
+      const y = e.clientY;
+
+      // Update user cursor position
+      setUserCursor(prev => prev ? { ...prev, x, y } : null);
+
+      // Update user in the users array
+      setUsers(prevUsers => {
+        return prevUsers.map(user => {
+          if (user.isRealUser) {
+            return { ...user, x, y };
+          }
+          return user;
+        });
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [userCursor]);
 
   useEffect(() => {
     // Generate 11 users: 7 females, 3 males, 1 premium male
     const generatedUsers = generateUsers();
-    setUsers(generatedUsers);
+
+    // If userCursor exists, add it to the array
+    const initialUsers = userCursor
+      ? [...generatedUsers, userCursor]
+      : generatedUsers;
+
+    setUsers(initialUsers);
 
     const interval = setInterval(() => {
       setUsers(prevUsers => {
+        // Find real user cursor in the array
+        const userCursorFromArray = prevUsers.find(u => u.isRealUser);
+
         // Check for interactions
         const newInteractions: Record<number, number> = {};
         const interactionDistance = 80; // Distance for interaction
@@ -51,11 +112,18 @@ const Canvas = () => {
 
             // If they're close enough, create an interaction
             if (distance < interactionDistance) {
-              if (
-                // Male-female interaction
+              // Regular interaction condition
+              const regularInteraction = (
                 (prevUsers[i].gender === 'male' && prevUsers[j].gender === 'female') ||
                 (prevUsers[i].gender === 'female' && prevUsers[j].gender === 'male')
-              ) {
+              );
+
+              // Special condition for real user - can interact with any cursor
+              const userInteraction = (
+                prevUsers[i].isRealUser || prevUsers[j].isRealUser
+              );
+
+              if (regularInteraction || userInteraction) {
                 newInteractions[prevUsers[i].id] = prevUsers[j].id;
                 newInteractions[prevUsers[j].id] = prevUsers[i].id;
 
@@ -79,8 +147,17 @@ const Canvas = () => {
 
         setInteractions(newInteractions);
 
-        // Update positions
+        // Update positions (skip updating the real user cursor position)
         return prevUsers.map(user => {
+          // Don't change real user's position through animation
+          if (user.isRealUser) {
+            return {
+              ...user,
+              isInteracting: !!newInteractions[user.id],
+              interactingWith: newInteractions[user.id]
+            };
+          }
+
           // Calculate new position
           let newX = user.x;
           let newY = user.y;
@@ -122,12 +199,12 @@ const Canvas = () => {
     }, 30); // Faster update rate (30ms instead of 50ms) for smoother animation
 
     return () => clearInterval(interval);
-  }, []);
+  }, [userCursor]);
 
   return (
     <div
       ref={canvasRef}
-      className="relative h-full w-full bg-black"
+      className="relative h-full w-full bg-black cursor-none"
     >
       {/* Render interaction lines */}
       <svg className="absolute h-full w-full pointer-events-none">
@@ -138,6 +215,7 @@ const Canvas = () => {
           if (!user1 || !user2 || parseInt(userId1) > userId2) return null;
 
           const isPremiumInteraction = user1.isPremium || user2.isPremium;
+          const isUserInteraction = user1.isRealUser || user2.isRealUser;
 
           // Calculate interaction duration
           const interactionKey = [parseInt(userId1), parseInt(userId2)].sort().join('-');
@@ -148,6 +226,12 @@ const Canvas = () => {
           let strokeWidth = isPremiumInteraction ? 2 : 1;
           let opacity = 0.7;
           let strokeDash = "4";
+
+          // Make user interactions more prominent
+          if (isUserInteraction) {
+            strokeWidth += 0.5;
+            opacity = 0.8;
+          }
 
           // Enhance line as interaction continues (without using explicit timer)
           if (interactionDuration > 1000) {
@@ -185,14 +269,56 @@ const Canvas = () => {
         })}
       </svg>
 
-      {/* Render users */}
-      {users.map(user => (
+      {/* Render users (not including the real user cursor) */}
+      {users.filter(user => !user.isRealUser).map(user => (
         <Cursor
           key={user.id}
           user={user}
           isInteracting={!!interactions[user.id]}
         />
       ))}
+
+      {/* Render real user cursor separately */}
+      {userCursor && (
+        <div
+          className="absolute pointer-events-none z-50"
+          style={{
+            left: `${userCursor.x}px`,
+            top: `${userCursor.y}px`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div className="relative">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M8.5,4.5 L8.5,22.5 L13.5,17.5 L17.5,26.5 L21.5,24.5 L17.5,15.5 L23.5,15.5 L8.5,4.5 Z"
+                fill="#7e22ce" // Purple color for user cursor
+                stroke="white"
+                strokeWidth="1.5"
+              />
+            </svg>
+
+            {/* Name tag for user cursor */}
+            <div
+              className={`absolute top-[28px] left-[0px] rounded-md px-3 py-1.5 font-medium text-white shadow-lg min-w-[100px] flex items-center ${interactions[userCursor.id] ? 'animate-pulse' : ''}`}
+              style={{
+                backgroundColor: '#7e22ce', // Purple
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span className="mr-1">{userCursor.name}</span>
+              <span className="opacity-80">@{userCursor.username}</span>
+              <span className="ml-1">⚡</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
