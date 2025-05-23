@@ -129,13 +129,6 @@ const Canvas = () => {
       ref={canvasRef}
       className="relative h-full w-full bg-black"
     >
-      <div className="absolute left-4 top-4 text-white text-sm opacity-70">
-        <p>Cursor Dating Canvas</p>
-        <p>Pink: Female users (7)</p>
-        <p>Light blue: Male users (3)</p>
-        <p>Purple: Premium male user (1)</p>
-      </div>
-
       {/* Render interaction lines */}
       <svg className="absolute h-full w-full pointer-events-none">
         {Object.entries(interactions).map(([userId1, userId2]) => {
