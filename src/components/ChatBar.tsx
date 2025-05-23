@@ -138,11 +138,11 @@ const ChatBar: React.FC<ChatBarProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30 pointer-events-none"
+      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30 pointer-events-none cursor-none"
     >
       {/* Chat window - limited to 50% width */}
       <div
-        className="w-full max-w-xl h-[480px] bg-gray-900/90 border border-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-auto"
+        className="w-full max-w-xl h-[480px] bg-gray-900/90 border border-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-auto cursor-default"
       >
         {/* Chat header */}
         <div className="flex items-center justify-between px-4 py-3 bg-gray-800/70 border-b border-gray-700 shrink-0">
@@ -161,7 +161,7 @@ const ChatBar: React.FC<ChatBarProps> = ({
             </div>
             <button
               onClick={onCloseChat}
-              className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition-colors"
+              className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition-colors cursor-pointer"
             >
               Close
             </button>
@@ -171,7 +171,7 @@ const ChatBar: React.FC<ChatBarProps> = ({
         {/* Messages container */}
         <div
           ref={messagesContainerRef}
-          className="flex-grow overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-900/95 to-gray-800/95"
+          className="flex-grow overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-900/95 to-gray-800/95 cursor-default"
         >
           {/* Render message groups */}
           {groupedMessages().map((group, groupIndex) => (
@@ -229,7 +229,7 @@ const ChatBar: React.FC<ChatBarProps> = ({
             <input
               ref={inputRef}
               type="text"
-              className="flex-grow bg-gray-700/80 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-1 focus:ring-purple-500"
+              className="flex-grow bg-gray-700/80 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-1 focus:ring-purple-500 cursor-text"
               placeholder="Type your message..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
@@ -237,7 +237,7 @@ const ChatBar: React.FC<ChatBarProps> = ({
             />
             <button
               type="submit"
-              className="ml-3 bg-purple-600/90 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg transition-colors"
+              className="ml-3 bg-purple-600/90 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg transition-colors cursor-pointer"
             >
               Send
             </button>
