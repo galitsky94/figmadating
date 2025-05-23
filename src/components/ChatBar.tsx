@@ -138,11 +138,11 @@ const ChatBar: React.FC<ChatBarProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-transparent z-50 pointer-events-none"
+      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30 pointer-events-none"
     >
       {/* Chat window - limited to 50% width */}
       <div
-        className="w-full max-w-xl h-[480px] bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-auto"
+        className="w-full max-w-xl h-[480px] bg-gray-900/90 border border-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden pointer-events-auto"
       >
         {/* Chat header */}
         <div className="flex items-center justify-between px-4 py-3 bg-gray-800/70 border-b border-gray-700 shrink-0">
