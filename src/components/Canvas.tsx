@@ -25,6 +25,7 @@ const Canvas = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [interactions, setInteractions] = useState<Record<number, number>>({});
   const canvasRef = useRef<HTMLDivElement>(null);
+  const interactionStartTimeRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     // Generate 11 users: 7 females, 3 males, 1 premium male
@@ -36,6 +37,7 @@ const Canvas = () => {
         // Check for interactions
         const newInteractions: Record<number, number> = {};
         const interactionDistance = 80; // Distance for interaction
+        const now = Date.now();
 
         // Check each pair of users for possible interactions
         for (let i = 0; i < prevUsers.length; i++) {
@@ -56,10 +58,24 @@ const Canvas = () => {
               ) {
                 newInteractions[prevUsers[i].id] = prevUsers[j].id;
                 newInteractions[prevUsers[j].id] = prevUsers[i].id;
+
+                // Track interaction start time
+                const interactionKey = [prevUsers[i].id, prevUsers[j].id].sort().join('-');
+                if (!interactionStartTimeRef.current[interactionKey]) {
+                  interactionStartTimeRef.current[interactionKey] = now;
+                }
               }
             }
           }
         }
+
+        // Clean up interaction times for pairs no longer interacting
+        Object.keys(interactionStartTimeRef.current).forEach(key => {
+          const [id1, id2] = key.split('-').map(Number);
+          if (!newInteractions[id1] || !newInteractions[id2]) {
+            delete interactionStartTimeRef.current[key];
+          }
+        });
 
         setInteractions(newInteractions);
 
@@ -130,6 +146,36 @@ const Canvas = () => {
 
           const isPremiumInteraction = user1.isPremium || user2.isPremium;
 
+          // Calculate interaction duration
+          const interactionKey = [parseInt(userId1), parseInt(userId2)].sort().join('-');
+          const interactionStart = interactionStartTimeRef.current[interactionKey] || Date.now();
+          const interactionDuration = Date.now() - interactionStart;
+
+          // Line properties based on interaction duration
+          let strokeWidth = isPremiumInteraction ? 2 : 1;
+          let opacity = 0.7;
+          let strokeDash = "4";
+
+          // Enhance line as interaction continues (without using explicit timer)
+          if (interactionDuration > 1000) {
+            strokeWidth += 0.5;
+            opacity = 0.8;
+            strokeDash = "3,2";
+          }
+
+          if (interactionDuration > 2000) {
+            strokeWidth += 0.5;
+            opacity = 0.9;
+            strokeDash = "2,1";
+          }
+
+          // At 3+ seconds, the line is most prominent
+          if (interactionDuration > 3000) {
+            strokeWidth += 1;
+            opacity = 1;
+            strokeDash = isPremiumInteraction ? "0" : "1";
+          }
+
           return (
             <line
               key={`${userId1}-${userId2}`}
@@ -138,9 +184,9 @@ const Canvas = () => {
               x2={user2.x + 10}
               y2={user2.y + 10}
               stroke={isPremiumInteraction ? "#9333ea" : "#ec4899"}
-              strokeWidth={isPremiumInteraction ? 2 : 1}
-              strokeDasharray="4"
-              opacity="0.7"
+              strokeWidth={strokeWidth}
+              strokeDasharray={strokeDash}
+              opacity={opacity}
             />
           );
         })}
